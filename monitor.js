@@ -1,7 +1,5 @@
 var bnet = require('battlenet-api');
 
-var secrets = require('./fotmsecrets');
-
 /*
     Task: watch armory updates as close as possible
 
@@ -27,13 +25,20 @@ var secrets = require('./fotmsecrets');
 
         - Injected dependencies?
             - Settings: { apikey, region, bracket, locale }
-            - Fetch function, loads raw ladder json for (apikey, region, bracket, locale)
-            - Storage, should have save(ladderSnapshot) method
+            - Fetch function, loads raw ladder json for given Settings
+            - Storage configured for those Settings, should have
+                * save(ladderSnapshot) method
+                * loadLatest() method
             - Analytics, should have log(event) method
             - EventBus, should have fire(event) method
 */
 
 function Monitor(settings, fetch, storage, analytics, eventBus) {
+    var self = this;
+
+    self.start = function() {
+
+    }
 }
 
 module.exports = Monitor;
