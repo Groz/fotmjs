@@ -9,7 +9,7 @@ var _ = require('underscore');
             [v] On start load latest entry from cloud storage -> Decompress(unBase64 -> unZip)
             [v] Fetch updates from blizzard API continously
             [v] Log raw request, duration and success/failure to Analytics
-            [ ] Reorder by (-rating, name, realmslug), take top N (~4000)
+            [v] Reorder by (-rating, name, realmslug), take top N (~4000)
             [ ] Every N fetches perform a merge trying to order them by time
             [ ] Remove duplicates
             [ ] Discard batch if all updates are previous/equal to last update in previous batch
@@ -39,9 +39,14 @@ function Monitor(settings, fetch, storage, analytics, eventBus) {
     var self = this;
     var delay = 1000; // 1000 ms = 1 second
     var nRequests = 0;
+    var topN = 3000;
 
     function processFetchedData(data) {
-        console.log(data);
+        var processedData = reorderLadder(data);
+        processedData.rows = processedData.rows.slice(0, topN);
+        console.log(processedData.rows);
+
+        analytics.log('Fetched entries', data.rows.length);
     };
 
     function monitorInterval() {
@@ -75,7 +80,18 @@ function Monitor(settings, fetch, storage, analytics, eventBus) {
 
 module.exports = Monitor;
 
-// UTIL functions
 function reorderLadder(ladderSnapshot) {
 
-}
+    var sortedRows = _(ladderSnapshot.rows).chain().
+        sortBy('name').
+        sortBy('realmId').
+        sortBy(function(e) { return -e.rating; }).
+        value();
+
+    // renumerate
+    for (var i = 0; i < sortedRows.length; i++) {
+        sortedRows[i].ranking = i+1;
+    }
+
+    return { rows: sortedRows };
+};
