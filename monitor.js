@@ -1,13 +1,14 @@
 var bnet = require('battlenet-api');
+var _ = require('underscore');
 
 /*
     Task: watch armory updates as close as possible
 
     Workflow: 
         - Workflow for each (region, bracket, apikey - per region):
-            [ ] On start load latest entry from cloud storage -> Decompress(unBase64 -> unZip)
-            [ ] Fetch updates from blizzard API continously
-            [ ] Log raw request, duration and success/failure to Analytics
+            [v] On start load latest entry from cloud storage -> Decompress(unBase64 -> unZip)
+            [v] Fetch updates from blizzard API continously
+            [v] Log raw request, duration and success/failure to Analytics
             [ ] Reorder by (-rating, name, realmslug), take top N (~4000)
             [ ] Every N fetches perform a merge trying to order them by time
             [ ] Remove duplicates
@@ -29,16 +30,52 @@ var bnet = require('battlenet-api');
             - Storage configured for those Settings, should have
                 * save(ladderSnapshot) method
                 * loadLatest() method
-            - Analytics, should have log(event) method
-            - EventBus, should have fire(event) method
+                and should handle compressing/decompressing
+            - Analytics, should have log(event) method, configured for given Settings
+            - EventBus, should have fire(event) method, configured for given Settings
 */
 
 function Monitor(settings, fetch, storage, analytics, eventBus) {
     var self = this;
+    var delay = 1000; // 1000 ms = 1 second
+    var nRequests = 0;
 
-    self.start = function() {
+    function processFetchedData(data) {
+        console.log(data);
+    };
 
-    }
+    function monitorInterval() {
+        var requestNumber = nRequests += 1;
+        var requestTime = new Date();
+
+        analytics.log('Fetch request');
+
+        fetch(settings, function fetchComplete(err, data) {
+            console.log('Fetch completed for request', requestNumber, '...');
+            var timeTaken = new Date() - requestTime;
+
+            if (err) {
+                analytics.log('Fetch error', timeTaken);
+                return console.error(err);
+            }
+            
+            analytics.log('Fetch success', timeTaken);
+            processFetchedData(data);
+        });
+    };
+
+    function monitorStart() {
+        var interval = setInterval(monitorInterval, delay);
+    };
+
+    self.start = function monitorInit() {
+        storage.loadLatest(monitorStart);
+    };
 }
 
 module.exports = Monitor;
+
+// UTIL functions
+function reorderLadder(ladderSnapshot) {
+
+}
