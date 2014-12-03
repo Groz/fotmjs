@@ -37,27 +37,59 @@ var _ = require('underscore');
 
 function Monitor(settings, fetch, storage, analytics, eventBus) {
     var self = this;
-    var delay = 1000; // 1000 ms = 1 second
+    var delay = 100; // 1000 ms = 1 second
     var nRequests = 0;
     var topN = 3000;
+    var nCurrentFetches = 0;
+    var nMaxConcurrentFetches = 10;
+    var startTime = new Date();
+    var nServed = 0;
+
+    function resetTimer() {
+        startTime = new Date();
+    }
+
+    function elapsed(date) {
+        return (new Date()).getTime() - date.getTime();
+    }
+
+    function logRPS() { // requests per second
+        var totalSeconds = elapsed(startTime) / 1000;
+        var rps = nServed / totalSeconds;
+        analytics.log("Fetches per second", rps);
+    }
 
     function processFetchedData(data) {
+        analytics.log('Fetched entries', data.rows.length);
+
         var processedData = reorderLadder(data);
         processedData.rows = processedData.rows.slice(0, topN);
-        console.log(processedData.rows);
-
-        analytics.log('Fetched entries', data.rows.length);
+        //console.log(processedData.rows);
     };
 
     function monitorInterval() {
-        var requestNumber = nRequests += 1;
+        if (nCurrentFetches >= nMaxConcurrentFetches) {
+            console.warn('Max number of concurrent fetches reached. Skipping interval.');
+            return;
+        }
+
+        logRPS();
+
+        nCurrentFetches += 1;
+        var requestNumber = nRequests += 1; // TODO: reset it sometimes?
+
         var requestTime = new Date();
+
+        console.log('Request #', requestNumber, 'initiated',
+            '(concurrent:', nCurrentFetches, '/', nMaxConcurrentFetches, ')...');
 
         analytics.log('Fetch request');
 
         fetch(settings, function fetchComplete(err, data) {
-            console.log('Fetch completed for request', requestNumber, '...');
-            var timeTaken = new Date() - requestTime;
+            nServed += 1;
+            nCurrentFetches -= 1;
+            console.log('Fetch completed for request #', requestNumber, '...');
+            var timeTaken = elapsed(requestTime);
 
             if (err) {
                 analytics.log('Fetch error', timeTaken);
@@ -74,6 +106,7 @@ function Monitor(settings, fetch, storage, analytics, eventBus) {
     };
 
     self.start = function monitorInit() {
+        startTime = new Date();
         storage.loadLatest(monitorStart);
     };
 }

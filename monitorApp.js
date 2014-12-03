@@ -1,7 +1,10 @@
-var Monitor = require('./Monitor');
+// The order of the next three lines is important to use bnet lib without command-line params
 var secrets = require('./fotmsecrets');
+process.env.BATTLENET_API_KEY = secrets.usapikey; 
+var bnet = require('battlenet-api');
 
-var fs = require('fs')
+var Monitor = require('./Monitor');
+var fs = require('fs');
 
 var settings = {
     apikey: secrets.usapikey,
@@ -17,10 +20,12 @@ function loadTestData() {
 
 var testData = loadTestData();
 
+// TODO: Fix the fact that it should always call callback, otherwise requests will be throttled
+// because number of concurrent requests will not be decremented.
 var fetch = function(settings, callback) {
-    console.log('fetch()');
-    callback(null, testData[0]); // TODO: change to 1?
-    //bnet.wow.pvp.leaderboards({origin: settings.region, bracket: settings.bracket}, callback);
+    //console.log('fetch()');
+    //callback(null, testData[0]); // TODO: change to 1?
+    bnet.wow.pvp.leaderboards({origin: settings.region, bracket: settings.bracket}, callback);
 };
 
 var storage = { // configured for settings
