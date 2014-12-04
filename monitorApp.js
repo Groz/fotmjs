@@ -8,9 +8,9 @@ var fs = require('fs');
 
 var settings = {
     apikey: secrets.usapikey,
-    region: 'us',
+    region: 'eu',
     bracket: '3v3',
-    locale: 'en_US'
+    locale: 'en_GB'
 };
 
 function loadTestData() {
