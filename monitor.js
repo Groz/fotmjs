@@ -6,15 +6,15 @@ var _ = require('underscore');
 
     Workflow: 
         - Workflow for each (region, bracket, apikey - per region):
-            [v] On start load latest entry from cloud storage -> Decompress(unBase64 -> unZip)
-            [v] Fetch updates from blizzard API continously
-            [v] Log raw request, duration and success/failure to Analytics
-            [v] Reorder by (-rating, name, realmslug) and reset ranking field for new ordering
-            [v] Add timestamp 
-            [v] Discard duplicates
-            [v] Log that real update to Analytics
-            [v] Compress(Zip -> Base64) -> cloud storage
-            [v] Push "new update (region, bracket)" message to a queue
+            - [x] On start load latest entry from cloud storage -> Decompress(unBase64 -> unZip)
+            - [x] Fetch updates from blizzard API continously
+            - [x] Log raw request, duration and success/failure to Analytics
+            - [x] Reorder by (-rating, name, realmslug) and reset ranking field for new ordering
+            - [x] Add timestamp 
+            - [x] Discard duplicates
+            - [x] Log that real update to Analytics
+            - [x] Compress(Zip -> Base64) -> cloud storage
+            - [x] Push "new update (region, bracket)" message to a queue
 
         - 36 000 requests per hour limit for api key = 10 rps
         total of 4 (2, 3, 5, rbg) brackets x 4 regions (5 when CN is added)
