@@ -1,0 +1,22 @@
+<html>
+
+<head>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      console.log("Connected...");
+
+      var socket = io('http://localhost');
+
+      socket.emit('user connected');
+
+      socket.on('userCount', function (data) {
+        console.log("message received:", data);
+      });
+    </script>
+</head>
+
+<body>
+    <h1>Hello</h1>
+</body>
+
+</html>

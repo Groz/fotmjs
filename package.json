@@ -1,6 +1,7 @@
-{ "dependencies" :
-    { 
-        "battlenet-api" : "~0.4.7",
-        "underscore" : "~1.7.0"
-    }
+{
+  "dependencies": {
+    "battlenet-api": "~0.4.7",
+    "lodash": "^2.4.1",
+    "socket.io": "^1.2.1"
+  }
 }
