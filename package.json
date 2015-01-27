@@ -2,11 +2,10 @@
   "dependencies": {
     "battlenet-api": "~0.4.7",
     "lodash": "^3.0.0",
+    "mocha": "^2.1.0",
     "socket.io": "^1.2.1"
   },
-
   "scripts": {
     "test": "mocha"
   }
-
 }
