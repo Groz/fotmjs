@@ -1,18 +1,35 @@
 var fs = require('fs');
 var _ = require('lodash');
 
-exports = module.exports = {};
+module.exports = {
+  avg: avg,
+  splitIntoTeams: splitIntoTeams,
+  fixOrdering: fixOrdering,
+  teamRating: teamRating,
+  beat: beat,
+  calcPR: calcPR,
+  fScore: fScore,
+  run: run,
+  teamEq: teamEq
+};
 
 function fixOrdering(ladder) {
-  ladder.sort(function(p1, p2) { return p1.rating < p2.rating; });
+  ladder.rows.sort(function(p1, p2) {
+    if (p1.rating < p2.rating)
+      return 1;
+    else if (p1.rating > p2.rating)
+      return -1;
+    else
+      return 0;
+  });
 
-  _.each(ladder, function(player, num) {
+  _.each(ladder.rows, function(player, num) {
     player.ranking = 1 + num;
   });
 }
 
 function splitIntoTeams(ladder, teamSize) {
-  var teams = _.chunk(ladder, teamSize);
+  var teams = _.chunk(ladder.rows, teamSize);
 
   if (teams[teams.length-1].length < teamSize)
     teams.pop();
@@ -46,7 +63,7 @@ function beat(left, right) {
         player.weeklyLosses += 1;
         player.seasonLosses += 1;
       }
-      player.rating += ratingChange;
+      player.rating += Math.floor(ratingChange);
     });
   }
 
@@ -62,12 +79,6 @@ function beat(left, right) {
   game(right, k * (0 - rightChance));
 }
 
-exports.avg = avg;
-exports.splitIntoTeams = splitIntoTeams;
-exports.fixOrdering = fixOrdering;
-exports.teamRating = teamRating;
-exports.beat = beat;
-
 function play(inTeams, N) {
   var teams = _.shuffle(inTeams);
 
@@ -78,9 +89,23 @@ function play(inTeams, N) {
   }
 }
 
-function dataLoaded(error, data) {
-  var ladder = JSON.parse(data).rows;
+function calcPR(actual, predicted, eq) {
+  var nCorrectlyPredicted = _.reduce(predicted, function(s, x) {
+    return s + (_.some(actual, _.curry(eq)(x)) ? 1 : 0);
+  }, 0);
 
+  return {
+    precision: nCorrectlyPredicted / predicted.length,
+    recall: nCorrectlyPredicted / actual.length
+  };
+}
+
+function fScore(beta, precision, recall) {
+  if (precision === 0 && recall === 0) return 0;
+  return (1 + beta * beta) * precision * recall / (beta * beta * precision + recall);
+}
+
+function sim(ladder, predictor) {
   _.each(ladder, function(player) {
     player.seasonWins = 0;
     player.seasonLosses = 0;
@@ -93,16 +118,52 @@ function dataLoaded(error, data) {
 
   var teams = splitIntoTeams(ladder, 3);
 
-  for (var i = 0; i < 100; ++i)
-    play(teams, 100);
+  // setup
+  for (var i = 0; i < 500; ++i)
+    play(teams, 500);
 
   fixOrdering(ladder);
-  console.log(ladder);
+
+  // actual
+  predictor(ladder); // seed
+
+  var nTurns = 1000;
+  var nTeamsPerTurn = 20;
+  var prs = [];
+
+  for (var i = 0; i < nTurns; ++i) {
+    play(teams, nTeamsPerTurn);
+    fixOrdering(ladder);
+
+    var predictedTeams = predictor(ladder);
+    var actualTeams = teams.slice(0, nTeamsPerTurn);
+    var pr = calcPR(actualTeams, predictedTeams, teamEq);
+    prs.push(pr);
+  }
+
+  var p = avg(pr, function(x) { return x.precision; });
+  var r = avg(pr, function(x) { return x.recall; });
+  return fScore(0.5, p, r);
 }
 
-function run() {
-  fs.readFile('test/raw_ladder.json', 'utf8', dataLoaded);
+function teamEq(teamA, teamB) {
+  function teamKey(t) {
+    return _.map(t, function(p) { return p.name; }).sort().join();
+  }
+  return teamKey(teamA) === teamKey(teamB);
 }
 
+function run(predictor, teamSize) {
+  fs.readFile('test/raw_ladder.json', 'utf8', function dataLoaded(error, data) {
+    if (error)
+      return console.error(error);
 
+    var ladder = JSON.parse(data);
+    ladder.teamSize = teamSize;
 
+    var score = sim(ladder, predictor);
+    console.log("F(0.5) score:", score);
+  });
+}
+
+//run();
